@@ -1,0 +1,35 @@
+# Publica las versiones de Newen Play a nombre del robot de GitHub.
+#
+# Por que asi: una version subida a mano muestra en la pagina la cuenta que la
+# subio. Se sube como BORRADOR (los borradores no los ve el publico, con la
+# etiqueta «borrador-v1.0.17») y este robot la pasa a version publica. Revisa
+# cada 20 minutos; tambien se puede correr a mano desde la pestaña Actions.
+name: Publicar version
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Borradores a versiones publicas
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          gh api "repos/$REPO/releases?per_page=30" \
+            --jq '.[] | select(.draft and (.tag_name | startswith("borrador-v"))) | .tag_name' > borradores.txt
+          while read -r B; do
+            [ -n "$B" ] || continue
+            TAG="${B#borrador-}"
+            rm -f NewenPlay.apk
+            gh release download "$B" -R "$REPO" -p NewenPlay.apk -D .
+            sha256sum NewenPlay.apk
+            gh release create "$TAG" NewenPlay.apk -R "$REPO" \
+              --title "Newen Play ${TAG#v}" --notes "Newen Play ${TAG#v}" --latest
+            gh release delete "$B" -R "$REPO" --yes
+          done < borradores.txt
