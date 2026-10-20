@@ -26,10 +26,11 @@ jobs:
           while read -r B; do
             [ -n "$B" ] || continue
             TAG="${B#borrador-}"
-            rm -f NewenPlay.apk
-            gh release download "$B" -R "$REPO" -p NewenPlay.apk -D .
-            sha256sum NewenPlay.apk
-            gh release create "$TAG" NewenPlay.apk -R "$REPO" \
+            # Todo lo del borrador: el APK y, desde la 1.0.28, el instalador de Windows (20-oct-2026).
+            rm -rf subir && mkdir subir
+            gh release download "$B" -R "$REPO" -D subir
+            sha256sum subir/*
+            gh release create "$TAG" subir/* -R "$REPO" \
               --title "Newen Play ${TAG#v}" --notes "Newen Play ${TAG#v}" --latest
             gh release delete "$B" -R "$REPO" --yes
           done < borradores.txt
